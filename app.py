@@ -113,7 +113,7 @@ def read_item(q: str):
     params = {
         "myResources": "false",
         "searchTerm": q,  # q est une variable contenant la valeur de recherche
-        "pageSize": "50",
+        "pageSize": "15",
         "pageNumber": "1",
         "resType": "103"
     }
