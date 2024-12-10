@@ -13,10 +13,6 @@ def read_root():
     return {"message": "Bienvenue sur mon API !"}
 
 
-@app.get("/items/{item_id}")
-def read_item(item_id: int, q: str = None):
-    return {"item_id": item_id, "q": q}
-
 
 @app.get("/uvsq/edt/{classe}+{start_date}+{end_date}")
 def read_item(classe: str, start_date: str, end_date: str):
