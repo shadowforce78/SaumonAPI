@@ -13,7 +13,6 @@ def read_root():
     return {"message": "Bienvenue sur mon API !"}
 
 
-
 @app.get("/uvsq/edt/{classe}+{start_date}+{end_date}")
 def read_item(classe: str, start_date: str, end_date: str):
     # --- Configuration API ---
@@ -106,6 +105,14 @@ def read_item(classe: str, start_date: str, end_date: str):
             cours.append(fetch_event_details(data[i][j]["ID"]))
     return cours
 
+
+# @app.get("/uvsq/classe/{q}")
+# def read_item(q: str):
+    
+#     url = f"https://edt.iut-velizy.uvsq.fr/Home/ReadResourceListItems?myResources=false&searchTerm={q}&pageSize=50&pageNumber=1&resType=103",
+    
+#     response = requests.get(url)
+#     return response.json()
 
 @app.get("/uvsq/bulletin/{id}+{password}")
 def read_item(id: int, password: str):
