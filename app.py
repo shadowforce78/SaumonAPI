@@ -106,13 +106,19 @@ def read_item(classe: str, start_date: str, end_date: str):
     return cours
 
 
-# @app.get("/uvsq/classe/{q}")
-# def read_item(q: str):
+@app.get("/uvsq/classe/{q}")
+def read_item(q: str):
     
-#     url = f"https://edt.iut-velizy.uvsq.fr/Home/ReadResourceListItems?myResources=false&searchTerm={q}&pageSize=50&pageNumber=1&resType=103",
-    
-#     response = requests.get(url)
-#     return response.json()
+    url = "https://edt.iut-velizy.uvsq.fr/Home/ReadResourceListItems"
+    params = {
+        "myResources": "false",
+        "searchTerm": q,  # q est une variable contenant la valeur de recherche
+        "pageSize": "50",
+        "pageNumber": "1",
+        "resType": "103"
+    }
+    response = requests.get(url, params=params)
+    return response.json()
 
 @app.get("/uvsq/bulletin/{id}+{password}")
 def read_item(id: int, password: str):
