@@ -122,7 +122,10 @@ def read_item(q: str):
 
 
 @app.get("/uvsq/bulletin/{id}+{password}")
-def read_item(id: int, password: str):
+def read_item(id: str, password: str):
+    if not id.isdigit():
+        return {"error": "L'identifiant doit être un chiffre"}
+
     class BulletinClient:
         def __init__(self, username: str, password: str):
             self.username = username
