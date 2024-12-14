@@ -108,17 +108,18 @@ def read_item(classe: str, start_date: str, end_date: str):
 
 @app.get("/uvsq/classe/{q}")
 def read_item(q: str):
-    
+
     url = "https://edt.iut-velizy.uvsq.fr/Home/ReadResourceListItems"
     params = {
         "myResources": "false",
         "searchTerm": q,  # q est une variable contenant la valeur de recherche
         "pageSize": "15",
         "pageNumber": "1",
-        "resType": "103"
+        "resType": "103",
     }
     response = requests.get(url, params=params)
     return response.json()
+
 
 @app.get("/uvsq/bulletin/{id}+{password}")
 def read_item(id: int, password: str):
@@ -167,4 +168,8 @@ def read_item(id: int, password: str):
     client = BulletinClient(username=username, password=password)
     client.login()
     data = client.fetch_datas()
-    return data
+
+    if "redirect" in data:
+        return {"error": "Identifiants invalides"}
+    else:
+        return data
