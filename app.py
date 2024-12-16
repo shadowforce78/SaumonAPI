@@ -132,74 +132,47 @@ def read_item(id: str, password: str):
             self.password = password
             self.session = requests.Session()
 
-        def __del__(self):
-            # Ensure session is properly closed
-            self.session.close()
-
         def login(self):
-            try:
-                # 1. Gather the cookies
-                url = "https://bulletins.iut-velizy.uvsq.fr/services/data.php?q=dataPremi%C3%A8reConnexion"
-                response = self.session.post(url, timeout=10)
-                response.raise_for_status()
+            # 1. Gather the cookies
+            url = "https://bulletins.iut-velizy.uvsq.fr/services/data.php?q=dataPremi%C3%A8reConnexion"
+            self.session.post(url)
 
-                # 2. Gather JWT token
-                url = "https://cas2.uvsq.fr/cas/login?service=https%3A%2F%2Fbulletins.iut-velizy.uvsq.fr%2Fservices%2FdoAuth.php%3Fhref%3Dhttps%253A%252F%252Fbulletins.iut-velizy.uvsq.fr%252F"
-                response = self.session.get(url, timeout=10)
-                response.raise_for_status()
-                
-                html = response.text
-                soup = BeautifulSoup(html, "html.parser")
-                token = soup.find("input", {"name": "execution"})
-                if not token:
-                    return {"error": "Could not obtain authentication token"}
-                token = token["value"]
+            # 2. Gather JWT token
+            url = "https://cas2.uvsq.fr/cas/login?service=https%3A%2F%2Fbulletins.iut-velizy.uvsq.fr%2Fservices%2FdoAuth.php%3Fhref%3Dhttps%253A%252F%252Fbulletins.iut-velizy.uvsq.fr%252F"
+            response = self.session.get(url)
+            html = response.text
+            soup = BeautifulSoup(html, "html.parser")
+            token = soup.find("input", {"name": "execution"})["value"]
 
-                # 3. Login
-                payload = {
-                    "username": self.username,
-                    "password": self.password,
-                    "execution": token,
-                    "_eventId": "submit",
-                    "geolocation": "",
-                }
-                response = self.session.post(url, data=payload, timeout=10)
-                response.raise_for_status()
-                
-            except requests.RequestException as e:
-                return {"error": f"Connection error: {str(e)}"}
+            # 3. Login
+            url = "https://cas2.uvsq.fr/cas/login?service=https%3A%2F%2Fbulletins.iut-velizy.uvsq.fr%2Fservices%2FdoAuth.php%3Fhref%3Dhttps%253A%252F%252Fbulletins.iut-velizy.uvsq.fr%252F"
+            payload = {
+                "username": self.username,
+                "password": self.password,
+                "execution": token,
+                "_eventId": "submit",
+                "geolocation": "",
+            }
+            self.session.post(url, data=payload)
 
         def fetch_datas(self):
-            try:
-                url = "https://bulletins.iut-velizy.uvsq.fr/services/data.php?q=dataPremi%C3%A8reConnexion"
-                headers = {
-                    "Accept-Language": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7",
-                    "Content-type": "application/x-www-form-urlencoded; charset=UTF-8",
-                }
+            url = "https://bulletins.iut-velizy.uvsq.fr/services/data.php?q=dataPremi%C3%A8reConnexion"
+            headers = {
+                "Accept-Language": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7",
+                "Content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+            }
 
-                response = self.session.post(url, headers=headers, timeout=10)
-                response.raise_for_status()
-                json_data = response.text.replace("\n", "")
-                return json.loads(json_data)
-                
-            except requests.RequestException as e:
-                return {"error": f"Connection error: {str(e)}"}
-            except json.JSONDecodeError:
-                return {"error": "Invalid response from server"}
+            response = self.session.post(url, headers=headers)
+            json_data = response.text.replace("\n", "")
+            return json.loads(json_data)
 
-    try:
-        client = BulletinClient(username=id, password=password)
-        login_result = client.login()
-        if isinstance(login_result, dict) and "error" in login_result:
-            return login_result
-            
-        data = client.fetch_datas()
-        if isinstance(data, dict) and "redirect" in data:
-            return {"error": "Identifiants invalides"}
+    username = id
+    password = password
+    client = BulletinClient(username=username, password=password)
+    client.login()
+    data = client.fetch_datas()
+
+    if "redirect" in data:
+        return {"error": "Identifiants invalides"}
+    else:
         return data
-        
-    except Exception as e:
-        return {"error": f"Unexpected error: {str(e)}"}
-    finally:
-        if 'client' in locals():
-            del client
