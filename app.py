@@ -3,7 +3,7 @@ import json
 import requests
 from bs4 import BeautifulSoup
 import datetime
-
+import base64
 
 app = FastAPI()
 
@@ -130,7 +130,7 @@ def read_item(id: str, password: str):
     class BulletinClient:
         def __init__(self, username: str, password: str):
             self.username = username
-            self.password = password
+            self.password = base64.b64decode(password).decode("utf-8")
             self.session = requests.Session()
 
         def login(self):
