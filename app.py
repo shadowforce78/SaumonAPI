@@ -125,15 +125,17 @@ def read_item(q: str):
 def read_item(id: str, password: str):
     if not id.isdigit():
         return {"error": "L'identifiant doit être un chiffre"}
+    
+    import base64
+    try:
+        decoded_password = base64.b64decode(password).decode('utf-8')
+    except:
+        return {"error": "Le mot de passe a mal été encodé"}
 
     class BulletinClient:
         def __init__(self, username: str, password: str):
             self.username = username
-            import base64
-            try:
-                self.password = base64.b64decode(password).decode('utf-8')
-            except:
-                self.password = password  # fallback if not base64 encoded
+            self.password = password  # Utilisation du mot de passe décodé
             self.session = requests.Session()
 
         def login(self):
@@ -171,7 +173,7 @@ def read_item(id: str, password: str):
             return json.loads(json_data)
 
     username = id
-    password = password
+    password = decoded_password  # Utilisation du mot de passe décodé
     client = BulletinClient(username=username, password=password)
     client.login()
     data = client.fetch_datas()
