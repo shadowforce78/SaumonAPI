@@ -121,8 +121,8 @@ def read_item(q: str):
     return response.json()
 
 
-@app.get("/uvsq/bulletin/{id}+{password}")
-def read_item(id: str, password: str):
+@app.get("/uvsq/bulletin")
+def read_item(id: str, password: str):  # Les paramètres deviennent des query params
     if not id.isdigit():
         return {"error": "L'identifiant doit être un chiffre"}
 
