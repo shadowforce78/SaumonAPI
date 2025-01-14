@@ -122,6 +122,7 @@ def read_item(q: str):
 
 
 @app.get("/uvsq/bulletin/{id}+{password}")
+#TODO : Query credentials instead of path parameters
 def read_item(id: str, password: str):
     if not id.isdigit():
         return {"error": "L'identifiant doit être un chiffre"}
