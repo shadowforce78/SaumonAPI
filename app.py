@@ -121,43 +121,56 @@ def read_item(q: str):
     return response.json()
 
 
-@app.get("/uvsq/bulletin")
-def read_item(id: str, password: str):  # Les paramètres deviennent des query params
+@app.get("/uvsq/bulletin/{id}+{password}")
+def read_item(id: str, password: str):
     if not id.isdigit():
         return {"error": "L'identifiant doit être un chiffre"}
 
-    session = requests.Session()
+    class BulletinClient:
+        def __init__(self, username: str, password: str):
+            self.username = username
+            self.password = password
+            self.session = requests.Session()
 
-    # 1. Gather the cookies
-    url = "https://bulletins.iut-velizy.uvsq.fr/services/data.php?q=dataPremi%C3%A8reConnexion"
-    session.post(url)
+        def login(self):
+            # 1. Gather the cookies
+            url = "https://bulletins.iut-velizy.uvsq.fr/services/data.php?q=dataPremi%C3%A8reConnexion"
+            self.session.post(url)
 
-    # 2. Gather JWT token
-    url = "https://cas2.uvsq.fr/cas/login?service=https%3A%2F%2Fbulletins.iut-velizy.uvsq.fr%2Fservices%2FdoAuth.php%3Fhref%3Dhttps%253A%252F%252Fbulletins.iut-velizy.uvsq.fr%252F"
-    response = session.get(url)
-    soup = BeautifulSoup(response.text, "html.parser")
-    token = soup.find("input", {"name": "execution"})["value"]
+            # 2. Gather JWT token
+            url = "https://cas2.uvsq.fr/cas/login?service=https%3A%2F%2Fbulletins.iut-velizy.uvsq.fr%2Fservices%2FdoAuth.php%3Fhref%3Dhttps%253A%252F%252Fbulletins.iut-velizy.uvsq.fr%252F"
+            response = self.session.get(url)
+            html = response.text
+            soup = BeautifulSoup(html, "html.parser")
+            token = soup.find("input", {"name": "execution"})["value"]
 
-    # 3. Login
-    payload = {
-        "username": id,
-        "password": password,
-        "execution": token,
-        "_eventId": "submit",
-        "geolocation": "",
-    }
-    session.post(url, data=payload)
+            # 3. Login
+            url = "https://cas2.uvsq.fr/cas/login?service=https%3A%2F%2Fbulletins.iut-velizy.uvsq.fr%2Fservices%2FdoAuth.php%3Fhref%3Dhttps%253A%252F%252Fbulletins.iut-velizy.uvsq.fr%252F"
+            payload = {
+                "username": self.username,
+                "password": self.password,
+                "execution": token,
+                "_eventId": "submit",
+                "geolocation": "",
+            }
+            self.session.post(url, data=payload)
 
-    # 4. Fetch data
-    url = "https://bulletins.iut-velizy.uvsq.fr/services/data.php?q=dataPremi%C3%A8reConnexion"
-    headers = {
-        "Accept-Language": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7",
-        "Content-type": "application/x-www-form-urlencoded; charset=UTF-8",
-    }
+        def fetch_datas(self):
+            url = "https://bulletins.iut-velizy.uvsq.fr/services/data.php?q=dataPremi%C3%A8reConnexion"
+            headers = {
+                "Accept-Language": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7",
+                "Content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+            }
 
-    response = session.post(url, headers=headers)
-    json_data = response.text.replace("\n", "")
-    data = json.loads(json_data)
+            response = self.session.post(url, headers=headers)
+            json_data = response.text.replace("\n", "")
+            return json.loads(json_data)
+
+    username = id
+    password = password
+    client = BulletinClient(username=username, password=password)
+    client.login()
+    data = client.fetch_datas()
 
     if "redirect" in data:
         return {"error": "Identifiants invalides"}
