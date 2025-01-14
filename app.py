@@ -130,7 +130,10 @@ def read_item(id: str, password: str):
         def __init__(self, username: str, password: str):
             self.username = username
             import base64
-            self.password = base64.b64decode(password).decode('utf-8')
+            try:
+                self.password = base64.b64decode(password).decode('utf-8')
+            except:
+                self.password = password  # fallback if not base64 encoded
             self.session = requests.Session()
 
         def login(self):
