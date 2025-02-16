@@ -3,6 +3,7 @@ import json
 import requests
 from bs4 import BeautifulSoup
 import datetime
+from AI import format_edt_ia
 
 app = FastAPI()
 
@@ -102,7 +103,18 @@ def read_item(classe: str, start_date: str, end_date: str):
     for i in data:
         for j in range(len(data[i])):
             cours.append(fetch_event_details(data[i][j]["ID"]))
-    return cours
+    cours_format_ia = format_edt_ia(json.dumps(cours))
+    
+    # Parse the string as JSON and return it directly
+    try:
+        # Remove the markdown code block symbols if present
+        cours_format_ia = cours_format_ia.replace("```json", "").replace("```", "").strip()
+        # Parse the string as JSON
+        formatted_json = json.loads(cours_format_ia)
+        # Return the parsed JSON (FastAPI will handle the JSON formatting)
+        return formatted_json
+    except json.JSONDecodeError:
+        return {"error": "Failed to parse response as JSON"}
 
 
 @app.get("/uvsq/classe/{q}")
