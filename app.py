@@ -4,6 +4,9 @@ import requests
 from bs4 import BeautifulSoup
 import datetime
 from AI import format_edt_ia
+import base64
+import re
+
 
 class BulletinClient:
     def __init__(self, username: str, password: str):
@@ -46,15 +49,12 @@ class BulletinClient:
 
     def fetch_releve(self, semestre):
         url = "https://bulletins.iut-velizy.uvsq.fr/services/data.php"
-        params = {
-            "q": "relevéEtudiant",
-            "semestre": semestre
-        }
+        params = {"q": "relevéEtudiant", "semestre": semestre}
         headers = {
             "Accept-Language": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7",
             "Content-type": "application/x-www-form-urlencoded; charset=UTF-8",
         }
-        
+
         response = self.session.get(url, params=params, headers=headers)
         if response.status_code == 200:
             try:
@@ -62,6 +62,7 @@ class BulletinClient:
             except json.JSONDecodeError:
                 return {"error": "Impossible de décoder la réponse JSON"}
         return {"error": f"Erreur {response.status_code}"}
+
 
 app = FastAPI()
 
@@ -162,11 +163,13 @@ def read_item(classe: str, start_date: str, end_date: str):
         for j in range(len(data[i])):
             cours.append(fetch_event_details(data[i][j]["ID"]))
     cours_format_ia = format_edt_ia(json.dumps(cours))
-    
+
     # Parse the string as JSON and return it directly
     try:
         # Remove the markdown code block symbols if present
-        cours_format_ia = cours_format_ia.replace("```json", "").replace("```", "").strip()
+        cours_format_ia = (
+            cours_format_ia.replace("```json", "").replace("```", "").strip()
+        )
         # Parse the string as JSON
         formatted_json = json.loads(cours_format_ia)
         # Return the parsed JSON (FastAPI will handle the JSON formatting)
@@ -191,14 +194,13 @@ def read_item(q: str):
 
 
 @app.get("/uvsq/bulletin/{id}+{password}")
-#TODO : Query credentials instead of path parameters
+# TODO : Query credentials instead of path parameters
 def read_item(id: str, password: str):
     if not id.isdigit():
         return {"error": "L'identifiant doit être un chiffre"}
-    
-    import base64
+
     try:
-        decoded_password = base64.b64decode(password).decode('utf-8')
+        decoded_password = base64.b64decode(password).decode("utf-8")
     except:
         return {"error": "Le mot de passe a mal été encodé"}
 
@@ -213,27 +215,136 @@ def read_item(id: str, password: str):
     else:
         return data
 
+
 @app.get("/uvsq/bulletin/releve/{id}+{password}+{semestre}")
 def get_releve(id: str, password: str, semestre: str):
     if not id.isdigit():
         return {"error": "L'identifiant doit être un chiffre"}
-    
+
     if not semestre.isdigit():
         return {"error": "Le semestre doit être un chiffre"}
-    
-    import base64
+
     try:
-        decoded_password = base64.b64decode(password).decode('utf-8')
+        decoded_password = base64.b64decode(password).decode("utf-8")
     except:
         return {"error": "Le mot de passe a mal été encodé"}
 
     client = BulletinClient(username=id, password=decoded_password)
     client.login()
-    
+
     # Vérifier que la connexion a réussi
     initial_data = client.fetch_datas()
     if "redirect" in initial_data:
         return {"error": "Identifiants invalides"}
-    
+
     # Récupérer le relevé
     return client.fetch_releve(semestre)
+
+
+@app.get("/scans/info/{name}")
+def get_scan_info(name: str):
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+    }
+
+    url = "https://anime-sama.fr/catalogue/" + name
+    response = requests.get(url, headers=headers)
+    html_content = response.text
+
+    # Extraire les informations de la page
+    try:
+        # Créer le parser BeautifulSoup pour extraire des informations basiques
+        soup = BeautifulSoup(html_content, "html.parser")
+
+        # Extraire le titre
+        titre_element = soup.find("h4", {"id": "titreOeuvre"})
+        titre = titre_element.text if titre_element else "Non disponible"
+
+        # Extraire le titre alternatif
+        titre_alter_element = soup.find("h2", {"id": "titreAlter"})
+        titre_alter = (
+            titre_alter_element.text if titre_alter_element else "Non disponible"
+        )
+
+        # Extraire l'image de couverture
+        image_element = soup.find("img", {"id": "coverOeuvre"})
+        image_url = image_element["src"] if image_element else "Non disponible"
+
+        # Extraire le synopsis
+        synopsis_element = soup.find_all("p", class_="text-sm text-gray-400 mt-2")
+        synopsis = synopsis_element[0].text if synopsis_element else "Non disponible"
+
+        # Extraire les genres
+        genres_element = soup.find("a", class_="text-sm text-gray-300 mt-2")
+        genres = genres_element.text if genres_element else "Non disponible"
+
+        # Extraire les informations sur l'avancement
+        avancement_element = soup.find(
+            lambda tag: tag.name == "p" and "Avancement :" in tag.text
+        )
+        avancement = (
+            avancement_element.find("a").text
+            if avancement_element
+            else "Non disponible"
+        )
+
+        # Extraire les informations sur la correspondance
+        correspondance_element = soup.find(
+            lambda tag: tag.name == "p" and "Correspondance :" in tag.text
+        )
+        correspondance = (
+            correspondance_element.find("a").text
+            if correspondance_element
+            else "Non disponible"
+        )
+
+        # Extraire les saisons d'anime à partir des appels à panneauAnime()
+
+        anime_disponibles = []
+        anime_pattern = r'panneauAnime\("([^"]+)",\s*"([^"]+)"\);'
+        anime_matches = re.findall(anime_pattern, html_content)
+        for match in anime_matches:
+            nom, url = match
+            anime_disponibles.append({"nom": nom, "url": url})
+
+        # Retirer le premier élément de la liste
+        if len(anime_disponibles) > 0:
+            anime_disponibles.pop(0)
+
+        # Extraire les types de scans à partir des appels à panneauScan()
+        scans_disponibles = []
+        scan_pattern = r'panneauScan\("([^"]+)",\s*"([^"]+)"\);'
+        scan_matches = re.findall(scan_pattern, html_content)
+        for match in scan_matches:
+            nom, url = match
+            scans_disponibles.append({"nom": nom, "url": url})
+
+        # Retirer le premier élément de la liste
+        if len(scans_disponibles) > 0:
+            scans_disponibles.pop(0)
+
+        # Construire la structure de réponse JSON
+        scan_info = {
+            "titre": titre,
+            "titre_alternatif": titre_alter,
+            "image_url": image_url,
+            "synopsis": synopsis,
+            "genres": genres,
+            "avancement": avancement,
+            "correspondance": correspondance,
+            "contenu_disponible": {
+                "anime": {
+                    "disponible": len(anime_disponibles) > 0,
+                    "saisons": anime_disponibles,
+                },
+                "manga": {
+                    "disponible": len(scans_disponibles) > 0,
+                    "types": scans_disponibles,
+                },
+            },
+        }
+
+        return scan_info
+
+    except Exception as e:
+        return {"error": f"Erreur lors de l'extraction des données : {str(e)}"}
