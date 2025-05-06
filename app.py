@@ -348,3 +348,67 @@ def get_scan_info(name: str):
 
     except Exception as e:
         return {"error": f"Erreur lors de l'extraction des données : {str(e)}"}
+
+
+@app.get("/scans/search/{query}")
+def search_anime(query: str):
+    """
+    Effectue une recherche sur anime-sama.fr avec le terme spécifié
+
+    Args:
+        query: Le terme de recherche
+
+    Returns:
+        Les résultats de la recherche au format JSON
+    """
+    url = "https://anime-sama.fr/template-php/defaut/fetch.php"
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Accept": "*/*",
+        "Origin": "https://anime-sama.fr",
+        "Referer": "https://anime-sama.fr/",
+    }
+
+    # Prépare les données POST
+    data = {"query": query}
+
+    try:
+        # Exécute la requête POST
+        response = requests.post(url, headers=headers, data=data)
+
+        # Si la réponse est HTML, on extrait les informations
+        if response.headers.get("content-type", "").startswith("text/html"):
+            soup = BeautifulSoup(response.text, "html.parser")
+            results = []
+
+            # Trouve tous les liens de résultats
+            links = soup.find_all("a")
+            for link in links:
+                href = link.get("href")
+                title = link.text.strip()
+
+                # Vérifie si c'est une image dans le lien
+                img = link.find("img")
+                image_url = img.get("src") if img else None
+
+                if href and title:
+                    results.append({"titre": title, "url": href, "image": image_url})
+
+            return {"query": query, "count": len(results), "results": results}
+
+        # Si la réponse est déjà au format JSON
+        elif response.headers.get("content-type", "").startswith("application/json"):
+            return response.json()
+
+        # Si on ne peut pas traiter la réponse
+        else:
+            return {
+                "error": "Format de réponse non reconnu",
+                "content-type": response.headers.get("content-type"),
+                "text": response.text[:100],  # Premiers 100 caractères pour déboguer
+            }
+
+    except Exception as e:
+        return {"error": f"Erreur lors de la recherche : {str(e)}"}
