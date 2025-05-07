@@ -1,7 +1,8 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 import requests
 from bs4 import BeautifulSoup
 import re
+from utils.scan_parser import get_formatted_scan_content
 
 router = APIRouter(tags=["Scans"])
 
@@ -198,7 +199,7 @@ def get_info_from_search(query: str):
 def get_scan(name: str, url: str):
     """
     Récupère les informations d'un scan à partir de son nom et de son URL
-    Combine les fonctionnalités de get_scan_id et get_scans en un seul endpoint
+    Analyse automatiquement le contenu brut des scans
     """
     # Base URL for anime-sama
     urlbase = "https://anime-sama.fr/catalogue/"
@@ -317,39 +318,69 @@ def get_scan(name: str, url: str):
             "fullUrl": episodes_url,
         }
 
-    # Le contenu du script episodes.js est généralement du JavaScript, pas du HTML
-    # On retourne directement le contenu sous forme de texte, ou on peut essayer de l'analyser si c'est du JSON
-    try:
-        # Essayer de parser comme du JSON si possible
-        if episodes_response.text.strip().startswith(
-            "{"
-        ) or episodes_response.text.strip().startswith("["):
-            import json
+    # Récupérer le contenu brut
+    raw_content = episodes_response.text
 
-            episodes_data = json.loads(episodes_response.text)
-            return {
-                "success": True,
-                "idScan": id_scan,
-                "pageUrl": fullurl,
-                "scriptUrl": episodes_url,
-                "episodes": episodes_data,
-            }
+    # Le contenu du script episodes.js est généralement du JavaScript, pas du HTML
+    try:
+        # Analyser automatiquement le contenu brut et le formater
+        from utils.scan_parser import get_formatted_scan_content
+        
+        # Créer la réponse avec les informations de base et le contenu analysé
+        result = {
+            "success": True,
+            "idScan": id_scan,
+            "pageUrl": fullurl,
+            "scriptUrl": episodes_url,
+        }
+        
+        # Analyser le contenu brut et ajouter les données formatées à la réponse
+        parsed_data = get_formatted_scan_content(raw_content)
+        
+        # Si l'analyse a réussi, ajouter les données structurées
+        if parsed_data.get("success", False):
+            result.update({
+                "parsed": True,
+                "total_chapters": parsed_data["total_chapters"],
+                "chapters": parsed_data["chapters"]
+            })
         else:
-            # Sinon retourner le texte brut
-            return {
-                "success": True,
-                "idScan": id_scan,
-                "pageUrl": fullurl,
-                "scriptUrl": episodes_url,
-                "rawContent": episodes_response.text,
-            }
+            # Si l'analyse a échoué, inclure le contenu brut et le message d'erreur
+            result.update({
+                "parsed": False,
+                "parse_error": parsed_data.get("message", "Erreur d'analyse inconnue"),
+                "rawContent": raw_content
+            })
+        
+        return result
+        
     except Exception as e:
-        # En cas d'erreur, retourner le texte brut
+        # En cas d'erreur, inclure le contenu brut et l'erreur
         return {
             "success": True,
             "idScan": id_scan,
             "pageUrl": fullurl,
             "scriptUrl": episodes_url,
-            "rawContent": episodes_response.text,
-            "parseError": str(e),
+            "parsed": False,
+            "parse_error": str(e),
+            "rawContent": raw_content
         }
+
+
+@router.post("/scans/parse-content")
+def parse_scan_content(data: dict):
+    """
+    Analyse et structure le contenu brut des scans fourni
+    
+    Args:
+        data: Un dictionnaire contenant la clé 'rawContent' avec le contenu brut des scans
+        
+    Returns:
+        Une structure JSON organisée avec les chapitres et les URLs des images
+    """
+    raw_content = data.get("rawContent")
+    if not raw_content:
+        raise HTTPException(status_code=400, detail="Le champ 'rawContent' est obligatoire")
+    
+    # Utiliser notre parseur pour formater le contenu
+    return get_formatted_scan_content(raw_content)
