@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Comment
 import re
 from utils.scan_parser import get_formatted_scan_content
 
@@ -384,3 +384,89 @@ def parse_scan_content(data: dict):
     
     # Utiliser notre parseur pour formater le contenu
     return get_formatted_scan_content(raw_content)
+
+
+@router.get("/scans/classic")
+def get_classic_animes():
+    """
+    Récupère la liste des animes classiques affichés sur la page d'accueil d'anime-sama.fr
+    """
+    url = "https://anime-sama.fr/"
+    
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+    }
+    
+    # Faire la requête GET vers la page d'accueil
+    response = requests.get(url, headers=headers)
+    
+    if response.status_code != 200:
+        return {
+            "error": f"Failed to access the homepage, status code: {response.status_code}",
+            "url": url,
+        }
+    
+    # Analyser le HTML avec BeautifulSoup
+    html_content = response.text
+    soup = BeautifulSoup(html_content, "html.parser")
+    
+    # Chercher le commentaire "<!-- classiques -->"
+    classic_section = None
+    
+    # Trouver tous les commentaires
+    comments = soup.find_all(string=lambda text: isinstance(text, Comment))
+    
+    # Chercher le commentaire spécifique et obtenir le conteneur qui suit
+    for comment in comments:
+        if "classiques" in comment.string:
+            # Le conteneur ID containerClassiques suit généralement ce commentaire
+            classic_section = soup.find(id="containerClassiques")
+            break
+    
+    # Si la section n'est pas trouvée directement, essayer une autre approche
+    if not classic_section:
+        # Chercher le div avec l'ID containerClassiques
+        classic_section = soup.find(id="containerClassiques")
+    
+    # Si la section n'est toujours pas trouvée, retourner une erreur
+    if not classic_section:
+        return {
+            "error": "Classiques section not found on the homepage",
+            "url": url,
+        }
+      # Extraire tous les animes de la section
+    classic_animes = []
+    classic_ids = []
+    
+    # Chercher tous les divs qui contiennent les informations des animes
+    anime_divs = classic_section.find_all("div", class_="shrink-0")
+    
+    for anime_div in anime_divs:
+        # Chercher le lien qui contient l'URL
+        link_tag = anime_div.find("a")
+        
+        if link_tag and link_tag.get("href"):
+            # Extraire l'ID du lien (format: /catalogue/demon-slayer/)
+            href = link_tag.get("href")
+            # Enlever les slashes au début et à la fin
+            href = href.strip("/")
+            # Diviser le chemin et prendre le dernier segment
+            parts = href.split("/")
+            if len(parts) > 1:
+                anime_id = parts[-1]  # Prendre le dernier segment (demon-slayer)
+                classic_ids.append(anime_id)
+                
+                # Aussi récupérer le titre pour info si besoin
+                title_tag = anime_div.find("h1", class_="text-white")
+                if title_tag and title_tag.text.strip():
+                    classic_animes.append({
+                        "id": anime_id,
+                        "title": title_tag.text.strip()
+                    })
+    
+    # Retourner la liste des animes classiques avec leurs identifiants
+    return {
+        "count": len(classic_ids),
+        "classics": classic_ids,
+        "details": classic_animes
+    }
