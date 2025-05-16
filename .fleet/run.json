@@ -1,0 +1,14 @@
+{
+  "configurations": [
+    {
+      "type": "python",
+      "name": "Run FastAPI with Uvicorn",
+      "module": "uvicorn",
+      "arguments": [
+        "app:app",
+        "--host", "127.0.0.1",
+        "--port", "5000"
+      ]
+    }
+  ]
+}
