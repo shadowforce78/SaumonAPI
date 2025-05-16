@@ -6,3 +6,4 @@ testIA.py
 img/
 res.txt
 .env
+view_scan.py
