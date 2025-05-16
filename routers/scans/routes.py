@@ -7,6 +7,82 @@ from utils.scan_parser import get_formatted_scan_content
 router = APIRouter(tags=["Scans"])
 
 
+# SEARCH
+
+
+@router.get("/scans/search/{query}")
+def search_anime(query: str):
+    """
+    Effectue une recherche sur anime-sama.fr avec le terme spécifié
+    """
+    url = "https://anime-sama.fr/template-php/defaut/fetch.php"
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Accept": "*/*",
+        "Origin": "https://anime-sama.fr",
+        "Referer": "https://anime-sama.fr/",
+    }
+
+    # Prépare les données POST
+    data = {"query": query}
+
+    try:
+        # Exécute la requête POST
+        response = requests.post(url, headers=headers, data=data)
+
+        # Si la réponse est HTML, on extrait les informations
+        if response.headers.get("content-type", "").startswith("text/html"):
+            soup = BeautifulSoup(response.text, "html.parser")
+            results = []
+
+            # Trouve tous les liens de résultats
+            links = soup.find_all("a")
+            for link in links:
+                href = link.get("href")
+                title = link.text.strip()
+
+                # Vérifie si c'est une image dans le lien
+                img = link.find("img")
+                image_url = img.get("src") if img else None
+
+                if href and title:
+                    alt = []
+                    # title\nalt1 \nalt2
+                    if "\n" in title:
+                        parts = title.split("\n")
+                        title = parts[0].strip()
+                        alt = [part.strip() for part in parts[1:] if part.strip()]
+                    else:
+                        alt = [title]
+                    results.append(
+                        {
+                            "titre": title,
+                            "image": image_url,
+                            "name-for-info": href.rstrip("/").split("/")[-1],
+                            "alt": alt,
+                        }
+                    )
+
+            return {"query": query, "count": len(results), "results": results}
+
+        # Si la réponse est déjà au format JSON
+        elif response.headers.get("content-type", "").startswith("application/json"):
+            return response.json()
+
+        # Si on ne peut pas traiter la réponse
+        else:
+            return {
+                "error": "Format de réponse non reconnu",
+                "content-type": response.headers.get("content-type"),
+                "text": response.text[:100],  # Premiers 100 caractères pour déboguer
+            }
+
+    except Exception as e:
+        return {"error": f"Erreur lors de la recherche : {str(e)}"}
+
+
 @router.get("/scans/info/{name}")
 def get_scan_info(name: str):
     """
@@ -114,85 +190,6 @@ def get_scan_info(name: str):
 
     except Exception as e:
         return {"error": f"Erreur lors de l'extraction des données : {str(e)}"}
-
-
-@router.get("/scans/search/{query}")
-def search_anime(query: str):
-    """
-    Effectue une recherche sur anime-sama.fr avec le terme spécifié
-    """
-    url = "https://anime-sama.fr/template-php/defaut/fetch.php"
-
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-        "Content-Type": "application/x-www-form-urlencoded",
-        "Accept": "*/*",
-        "Origin": "https://anime-sama.fr",
-        "Referer": "https://anime-sama.fr/",
-    }
-
-    # Prépare les données POST
-    data = {"query": query}
-
-    try:
-        # Exécute la requête POST
-        response = requests.post(url, headers=headers, data=data)
-
-        # Si la réponse est HTML, on extrait les informations
-        if response.headers.get("content-type", "").startswith("text/html"):
-            soup = BeautifulSoup(response.text, "html.parser")
-            results = []
-
-            # Trouve tous les liens de résultats
-            links = soup.find_all("a")
-            for link in links:
-                href = link.get("href")
-                title = link.text.strip()
-
-                # Vérifie si c'est une image dans le lien
-                img = link.find("img")
-                image_url = img.get("src") if img else None
-
-                if href and title:
-                    results.append(
-                        {
-                            "titre": title,
-                            "url": href,
-                            "image": image_url,
-                            "name-for-info": href.rstrip("/").split("/")[-1],
-                        }
-                    )
-
-            return {"query": query, "count": len(results), "results": results}
-
-        # Si la réponse est déjà au format JSON
-        elif response.headers.get("content-type", "").startswith("application/json"):
-            return response.json()
-
-        # Si on ne peut pas traiter la réponse
-        else:
-            return {
-                "error": "Format de réponse non reconnu",
-                "content-type": response.headers.get("content-type"),
-                "text": response.text[:100],  # Premiers 100 caractères pour déboguer
-            }
-
-    except Exception as e:
-        return {"error": f"Erreur lors de la recherche : {str(e)}"}
-
-
-@router.get("/scans/get_info_from_search/{query}")
-def get_info_from_search(query: str):
-    """
-    Récupère les informations d'un anime/manga à partir de la recherche
-    """
-    search_result = search_anime(query)
-    if "results" in search_result and len(search_result["results"]) > 0:
-        first_result = search_result["results"][0]
-        name_for_info = first_result["name-for-info"]
-        return get_scan_info(name_for_info)
-    else:
-        return {"error": "Aucun résultat trouvé"}
 
 
 @router.get("/scans/get_scan/{name}/{url:path}")
@@ -325,7 +322,7 @@ def get_scan(name: str, url: str):
     try:
         # Analyser automatiquement le contenu brut et le formater
         from utils.scan_parser import get_formatted_scan_content
-        
+
         # Créer la réponse avec les informations de base et le contenu analysé
         result = {
             "success": True,
@@ -333,27 +330,33 @@ def get_scan(name: str, url: str):
             "pageUrl": fullurl,
             "scriptUrl": episodes_url,
         }
-        
+
         # Analyser le contenu brut et ajouter les données formatées à la réponse
         parsed_data = get_formatted_scan_content(raw_content)
-        
+
         # Si l'analyse a réussi, ajouter les données structurées
         if parsed_data.get("success", False):
-            result.update({
-                "parsed": True,
-                "total_chapters": parsed_data["total_chapters"],
-                "chapters": parsed_data["chapters"]
-            })
+            result.update(
+                {
+                    "parsed": True,
+                    "total_chapters": parsed_data["total_chapters"],
+                    "chapters": parsed_data["chapters"],
+                }
+            )
         else:
             # Si l'analyse a échoué, inclure le contenu brut et le message d'erreur
-            result.update({
-                "parsed": False,
-                "parse_error": parsed_data.get("message", "Erreur d'analyse inconnue"),
-                "rawContent": raw_content
-            })
-        
+            result.update(
+                {
+                    "parsed": False,
+                    "parse_error": parsed_data.get(
+                        "message", "Erreur d'analyse inconnue"
+                    ),
+                    "rawContent": raw_content,
+                }
+            )
+
         return result
-        
+
     except Exception as e:
         # En cas d'erreur, inclure le contenu brut et l'erreur
         return {
@@ -363,7 +366,7 @@ def get_scan(name: str, url: str):
             "scriptUrl": episodes_url,
             "parsed": False,
             "parse_error": str(e),
-            "rawContent": raw_content
+            "rawContent": raw_content,
         }
 
 
@@ -371,17 +374,17 @@ def get_scan(name: str, url: str):
 # def parse_scan_content(data: dict):
 #     """
 #     Analyse et structure le contenu brut des scans fourni
-    
+
 #     Args:
 #         data: Un dictionnaire contenant la clé 'rawContent' avec le contenu brut des scans
-        
+
 #     Returns:
 #         Une structure JSON organisée avec les chapitres et les URLs des images
 #     """
 #     raw_content = data.get("rawContent")
 #     if not raw_content:
 #         raise HTTPException(status_code=400, detail="Le champ 'rawContent' est obligatoire")
-    
+
 #     # Utiliser notre parseur pour formater le contenu
 #     return get_formatted_scan_content(raw_content)
 
@@ -392,59 +395,59 @@ def get_classic_animes():
     Récupère la liste des animes classiques affichés sur la page d'accueil d'anime-sama.fr
     """
     url = "https://anime-sama.fr/"
-    
+
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
     }
-    
+
     # Faire la requête GET vers la page d'accueil
     response = requests.get(url, headers=headers)
-    
+
     if response.status_code != 200:
         return {
             "error": f"Failed to access the homepage, status code: {response.status_code}",
             "url": url,
         }
-    
+
     # Analyser le HTML avec BeautifulSoup
     html_content = response.text
     soup = BeautifulSoup(html_content, "html.parser")
-    
+
     # Chercher le commentaire "<!-- classiques -->"
     classic_section = None
-    
+
     # Trouver tous les commentaires
     comments = soup.find_all(string=lambda text: isinstance(text, Comment))
-    
+
     # Chercher le commentaire spécifique et obtenir le conteneur qui suit
     for comment in comments:
         if "classiques" in comment.string:
             # Le conteneur ID containerClassiques suit généralement ce commentaire
             classic_section = soup.find(id="containerClassiques")
             break
-    
+
     # Si la section n'est pas trouvée directement, essayer une autre approche
     if not classic_section:
         # Chercher le div avec l'ID containerClassiques
         classic_section = soup.find(id="containerClassiques")
-    
+
     # Si la section n'est toujours pas trouvée, retourner une erreur
     if not classic_section:
         return {
             "error": "Classiques section not found on the homepage",
             "url": url,
         }
-      # Extraire tous les animes de la section
+    # Extraire tous les animes de la section
     classic_animes = []
     classic_ids = []
-    
+
     # Chercher tous les divs qui contiennent les informations des animes
     anime_divs = classic_section.find_all("div", class_="shrink-0")
-    
+
     for anime_div in anime_divs:
         # Chercher le lien qui contient l'URL
         link_tag = anime_div.find("a")
-        
+
         if link_tag and link_tag.get("href"):
             # Extraire l'ID du lien (format: /catalogue/demon-slayer/)
             href = link_tag.get("href")
@@ -455,17 +458,13 @@ def get_classic_animes():
             if len(parts) > 1:
                 anime_id = parts[-1]  # Prendre le dernier segment (demon-slayer)
                 classic_ids.append(anime_id)
-                
+
                 # Aussi récupérer le titre pour info si besoin
                 title_tag = anime_div.find("h1", class_="text-white")
                 if title_tag and title_tag.text.strip():
-                    classic_animes.append({
-                        "id": anime_id,
-                        "title": title_tag.text.strip()
-                    })
-    
+                    classic_animes.append(
+                        {"id": anime_id, "title": title_tag.text.strip()}
+                    )
+
     # Retourner la liste des animes classiques avec leurs identifiants
-    return {
-        "count": len(classic_ids),
-        "details": classic_animes
-    }
+    return {"count": len(classic_ids), "details": classic_animes}
