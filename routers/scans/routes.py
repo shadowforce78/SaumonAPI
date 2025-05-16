@@ -467,6 +467,5 @@ def get_classic_animes():
     # Retourner la liste des animes classiques avec leurs identifiants
     return {
         "count": len(classic_ids),
-        "classics": classic_ids,
         "details": classic_animes
     }
