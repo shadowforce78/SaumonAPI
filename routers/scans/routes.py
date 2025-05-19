@@ -369,26 +369,6 @@ def get_scan(name: str, url: str):
             "rawContent": raw_content,
         }
 
-
-# @router.post("/scans/parse-content")
-# def parse_scan_content(data: dict):
-#     """
-#     Analyse et structure le contenu brut des scans fourni
-
-#     Args:
-#         data: Un dictionnaire contenant la clé 'rawContent' avec le contenu brut des scans
-
-#     Returns:
-#         Une structure JSON organisée avec les chapitres et les URLs des images
-#     """
-#     raw_content = data.get("rawContent")
-#     if not raw_content:
-#         raise HTTPException(status_code=400, detail="Le champ 'rawContent' est obligatoire")
-
-#     # Utiliser notre parseur pour formater le contenu
-#     return get_formatted_scan_content(raw_content)
-
-
 @router.get("/scans/classic")
 def get_classic_animes():
     """
