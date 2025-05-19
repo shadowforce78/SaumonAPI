@@ -443,7 +443,7 @@ def get_classic_animes():
                 title_tag = anime_div.find("h1", class_="text-white")
                 if title_tag and title_tag.text.strip():
                     classic_animes.append(
-                        {"id": anime_id, "title": title_tag.text.strip()}
+                        {"id": anime_id, "title": title_tag.text.strip(), "image_url": link_tag.find("img")["src"] if link_tag.find("img") else None}
                     )
 
     # Retourner la liste des animes classiques avec leurs identifiants
