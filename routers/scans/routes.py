@@ -36,9 +36,27 @@ def search_manga(title: str):
 
 @router.get("/scans/manga/{title}")
 def get_manga(title: str):
-    manga = manga_collection.find_one({"title": title})
+    # Normalize the title to handle different formats
+    # First, try an exact case-insensitive match
+    manga = manga_collection.find_one({"title": {"$regex": f"^{re.escape(title)}$", "$options": "i"}})
+    
     if not manga:
-        raise HTTPException(status_code=404, detail="Manga not found")
+        # If no exact match, try a more flexible match by replacing dashes with spaces and vice versa
+        normalized_title = title.replace("-", " ")
+        manga = manga_collection.find_one({
+            "$or": [
+                {"title": {"$regex": f"^{re.escape(normalized_title)}$", "$options": "i"}},
+                {"title": {"$regex": f"^{re.escape(title.replace(' ', '-'))}$", "$options": "i"}}
+            ]
+        })
+    
+    if not manga:
+        # If still no match, try a partial match
+        manga = manga_collection.find_one({"title": {"$regex": re.escape(title), "$options": "i"}})
+    
+    if not manga:
+        raise HTTPException(status_code=404, detail=f"Manga not found: {title}")
+    
     return manga
 
 
