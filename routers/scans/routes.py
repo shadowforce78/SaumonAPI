@@ -12,12 +12,18 @@ client = pymongo.MongoClient(MONGO_URL)
 
 router = APIRouter(tags=["Scans"])
 
+mangaCollec = client["mangas"]
+chapterCollec = client["chapters"]
 
-@router.get("/scans/count")
+@router.get("/scans/mangacount")
 def get_scan_count():
     """
     Get the count of scans in the database.
     """
-    collection = client["mangas"]
-    count = collection.count_documents({})
+    count = mangaCollec.count_documents({})
+    return {"count": count}
+
+@router.get("/scans/chaptercount")
+def get_chapter_count():
+    count = chapterCollec.count_documents({})
     return {"count": count}
