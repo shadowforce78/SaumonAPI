@@ -18,7 +18,6 @@ def get_scan_count():
     """
     Get the count of scans in the database.
     """
-    db = client["SushiScan"]
-    collection = db["mangas"]
+    collection = client["mangas"]
     count = collection.count_documents({})
     return {"count": count}
