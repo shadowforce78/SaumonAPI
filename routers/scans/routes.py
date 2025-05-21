@@ -18,6 +18,7 @@ db = client["SushiScan"]
 manga_collection = db["mangas"]
 chapter_collection = db["chapters"]
 
+
 @router.get("/scans/manga/count")
 def get_scan_count():
     """
@@ -25,6 +26,21 @@ def get_scan_count():
     """
     count = manga_collection.count_documents({})
     return {"count": count}
+
+
+@router.get("/scans/manga/search")
+def search_manga(title: str):
+    results = manga_collection.find({"title": {"$regex": title, "$options": "i"}})
+    return [manga for manga in results]
+
+
+@router.get("/scans/manga/{title}")
+def get_manga(title: str):
+    manga = manga_collection.find_one({"title": title})
+    if not manga:
+        raise HTTPException(status_code=404, detail="Manga not found")
+    return manga
+
 
 @router.get("/scans/chapter/count")
 def get_chapter_count():
