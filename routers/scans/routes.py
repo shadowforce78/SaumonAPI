@@ -30,7 +30,8 @@ def get_scan_count():
 
 @router.get("/scans/manga/search")
 def search_manga(title: str):
-    results = manga_collection.find({"title": {"$regex": title, "$options": "i"}})
+    regex_query = {"title": {"$regex": title, "$options": "i"}}
+    results = list(manga_collection.find(regex_query, {"title": 1, "genres": 1, "type": 1}))
     return [manga for manga in results]
 
 
