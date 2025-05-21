@@ -15,7 +15,7 @@ router = APIRouter(tags=["Scans"])
 mangaCollec = client["mangas"]
 chapterCollec = client["chapters"]
 
-@router.get("/scans/mangacount")
+@router.get("/scans/manga/count")
 def get_scan_count():
     """
     Get the count of scans in the database.
@@ -23,7 +23,7 @@ def get_scan_count():
     count = mangaCollec.count_documents({})
     return {"count": count}
 
-@router.get("/scans/chaptercount")
+@router.get("/scans/chapter/count")
 def get_chapter_count():
     count = chapterCollec.count_documents({})
     return {"count": count}
