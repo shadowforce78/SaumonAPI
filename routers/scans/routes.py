@@ -3,8 +3,34 @@ import requests
 from bs4 import BeautifulSoup, Comment
 import re
 import pymongo
+from bson import ObjectId
+import json
 import dotenv
 import os
+from typing import Dict, List, Any
+
+# Custom JSON encoder for handling MongoDB ObjectId
+class MongoJSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, ObjectId):
+            return str(obj)
+        return super(MongoJSONEncoder, self).default(obj)
+
+# Helper function to convert MongoDB documents to serializable dictionaries
+def serialize_doc(doc: Dict) -> Dict:
+    if doc is None:
+        return None
+    
+    # Convert MongoDB document to Python dict and handle ObjectId
+    doc_dict = {}
+    for key, value in doc.items():
+        if isinstance(value, ObjectId):
+            doc_dict[key] = str(value)
+        elif isinstance(value, list) and all(isinstance(x, ObjectId) for x in value):
+            doc_dict[key] = [str(x) for x in value]
+        else:
+            doc_dict[key] = value
+    return doc_dict
 
 dotenv.load_dotenv()
 MONGO_URL = os.getenv("MONGO_URL")
@@ -29,14 +55,15 @@ def get_scan_count():
 
 
 @router.get("/scans/manga/search")
-def search_manga(title: str):
+def search_manga(title: str) -> List[Dict[str, Any]]:
     regex_query = {"title": {"$regex": title, "$options": "i"}}
     results = list(manga_collection.find(regex_query, {"title": 1, "genres": 1, "type": 1}))
-    return [manga for manga in results]
+    # Serialize each document to handle ObjectId
+    return [serialize_doc(manga) for manga in results]
 
 
 @router.get("/scans/manga/{title}")
-def get_manga(title: str):
+def get_manga(title: str) -> Dict[str, Any]:
     # Normalize the title to handle different formats
     # First, try an exact case-insensitive match
     manga = manga_collection.find_one({"title": {"$regex": f"^{re.escape(title)}$", "$options": "i"}})
@@ -58,7 +85,8 @@ def get_manga(title: str):
     if not manga:
         raise HTTPException(status_code=404, detail=f"Manga not found: {title}")
     
-    return manga
+    # Serialize the document to handle ObjectId
+    return serialize_doc(manga)
 
 
 @router.get("/scans/chapter/count")
