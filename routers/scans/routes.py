@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, BackgroundTasks
 import requests
 from bs4 import BeautifulSoup, Comment
 import re
@@ -8,6 +8,7 @@ import json
 import dotenv
 import os
 from typing import Dict, List, Any
+from random import sample
 
 # Custom JSON encoder for handling MongoDB ObjectId
 class MongoJSONEncoder(json.JSONEncoder):
@@ -32,6 +33,40 @@ def serialize_doc(doc: Dict) -> Dict:
             doc_dict[key] = value
     return doc_dict
 
+# Function to update manga popularity when it is viewed/searched
+async def update_manga_popularity(title: str, background_tasks: BackgroundTasks):
+    """Increment the popularity counter for a manga by 1"""
+    background_tasks.add_task(
+        manga_collection.update_one,
+        {"title": {"$regex": f"^{re.escape(title)}$", "$options": "i"}},
+        {"$inc": {"popularity": 1}},
+        upsert=False
+    )
+
+# Initialize manga popularity based on chapter count (run once)
+async def initialize_manga_popularity(force_update: bool = False):
+    """Initialize popularity field for all mangas based on chapter count"""
+    # Check if popularity has been initialized - only run once
+    if not force_update:
+        has_popularity = manga_collection.find_one({"popularity": {"$exists": True}})
+        if has_popularity:
+            return False
+    
+    # Get all mangas and update popularity based on chapter count
+    cursor = manga_collection.find({})
+    
+    for manga in cursor:
+        chapter_count = manga.get("chapter_count", 0)
+        # Set initial popularity based on chapter count (with some base value)
+        initial_popularity = max(10, chapter_count * 2)  # At least 10, or 2 times chapters
+        
+        manga_collection.update_one(
+            {"_id": manga["_id"]},
+            {"$set": {"popularity": initial_popularity}}
+        )
+    
+    return True
+
 dotenv.load_dotenv()
 MONGO_URL = os.getenv("MONGO_URL")
 client = pymongo.MongoClient(MONGO_URL)
@@ -55,15 +90,21 @@ def get_scan_count():
 
 
 @router.get("/scans/manga/search")
-def search_manga(title: str) -> List[Dict[str, Any]]:
+async def search_manga(title: str, background_tasks: BackgroundTasks) -> List[Dict[str, Any]]:
     regex_query = {"title": {"$regex": title, "$options": "i"}}
     results = list(manga_collection.find(regex_query, {"title": 1, "genres": 1, "type": 1}))
+    
+    # Increment popularity for each manga found (in background)
+    for manga in results:
+        if "title" in manga:
+            await update_manga_popularity(manga["title"], background_tasks)
+    
     # Serialize each document to handle ObjectId
     return [serialize_doc(manga) for manga in results]
 
 
 @router.get("/scans/manga/{title}")
-def get_manga(title: str) -> Dict[str, Any]:
+async def get_manga(title: str, background_tasks: BackgroundTasks) -> Dict[str, Any]:
     # Normalize the title to handle different formats
     # First, try an exact case-insensitive match
     manga = manga_collection.find_one({"title": {"$regex": f"^{re.escape(title)}$", "$options": "i"}})
@@ -85,11 +126,101 @@ def get_manga(title: str) -> Dict[str, Any]:
     if not manga:
         raise HTTPException(status_code=404, detail=f"Manga not found: {title}")
     
+    # Increment popularity counter (in background)
+    await update_manga_popularity(manga["title"], background_tasks)
+    
     # Serialize the document to handle ObjectId
     return serialize_doc(manga)
+
+
+@router.get("/scans/homepage")
+async def get_homepage_mangas(background_tasks: BackgroundTasks) -> Dict[str, List[Dict[str, Any]]]:
+    """
+    Get a curated list of popular and recommended manga for the homepage.
+    
+    Returns different categories:
+    - Trending: Mangas with highest popularity score
+    - Popular: Mangas with popular genres like shonen, action, etc.
+    - Recommended: A random selection of mangas
+    """
+    # Initialize popularity for mangas if not already done
+    background_tasks.add_task(initialize_manga_popularity)
+    
+    # Projection to limit the fields returned
+    projection = {
+        "title": 1, 
+        "image": 1, 
+        "genres": 1, 
+        "type": 1, 
+        "status": 1, 
+        "chapter_count": 1, 
+        "popularity": 1,
+        "last_updated": 1
+    }
+    
+    # Get trending manga (those with highest popularity, limited to 10)
+    trending_cursor = manga_collection.find(
+        {}, 
+        projection
+    ).sort("popularity", pymongo.DESCENDING).limit(10)
+    trending = [serialize_doc(manga) for manga in trending_cursor]
+    
+    # If not enough trending mangas found, fallback to chapter count
+    if len(trending) < 5:
+        trending_cursor = manga_collection.find(
+            {}, 
+            projection
+        ).sort("chapter_count", pymongo.DESCENDING).limit(10)
+        trending = [serialize_doc(manga) for manga in trending_cursor]
+    
+    # Get popular genres manga (e.g., shonen, action, adventure)
+    popular_genres = ["Shonen", "Action", "Adventure", "Fantasy"]
+    popular_cursor = manga_collection.find(
+        {"genres": {"$in": popular_genres}}, 
+        projection
+    ).sort("popularity", pymongo.DESCENDING).limit(10)
+    popular = [serialize_doc(manga) for manga in popular_cursor]
+    
+    # Get some random recommendations
+    # First get the total count
+    total_manga = manga_collection.count_documents({})
+    # Then get a sample of mangas (up to 10)
+    limit = min(10, total_manga)
+    if limit > 0:
+        # Get a random sample using aggregation
+        random_cursor = manga_collection.aggregate([
+            {"$sample": {"size": limit}},
+            {"$project": projection}
+        ])
+        recommended = [serialize_doc(manga) for manga in random_cursor]
+    else:
+        recommended = []
+    
+    # Create the response
+    return {
+        "trending": trending,
+        "popular": popular,
+        "recommended": recommended
+    }
 
 
 @router.get("/scans/chapter/count")
 def get_chapter_count():
     count = chapter_collection.count_documents({})
     return {"count": count}
+
+
+@router.post("/scans/init-popularity")
+async def init_popularity(force: bool = False) -> Dict[str, Any]:
+    """
+    Initialize the popularity field for all mangas based on their chapter count.
+    Only needed to be run once or when manually triggering a reset.
+    
+    Parameters:
+    - force: If True, will reinitialize popularity even if it already exists.
+    """
+    result = await initialize_manga_popularity(force_update=force)
+    if result:
+        return {"status": "success", "message": "Manga popularity initialized successfully"}
+    else:
+        return {"status": "skipped", "message": "Manga popularity already initialized. Use force=true to reinitialize."}
