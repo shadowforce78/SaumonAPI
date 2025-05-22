@@ -209,6 +209,67 @@ def get_chapter_count():
     count = chapter_collection.count_documents({})
     return {"count": count}
 
+@router.get("/scans/chapter")
+async def get_chapter(title: str, scan_name: str, chapter_number: str, background_tasks: BackgroundTasks) -> Dict[str, Any]:
+    """
+    Récupère un chapitre spécifique d'un manga par son titre, le nom du scan et le numéro de chapitre.
+    
+    Parameters:
+    - title: Le titre du manga
+    - scan_name: Le nom du scan (ex: "Scan VF")
+    - chapter_number: Le numéro du chapitre (peut être une chaîne comme "1" ou "1.5")
+    
+    Returns:
+    - Les informations du chapitre avec les URLs des images
+    """
+    # Recherche du chapitre dans la collection
+    # Utilisation de re.escape pour les paramètres de la regex pour éviter les erreurs avec les caractères spéciaux
+    query = {
+        "manga_title": {"$regex": f"^{re.escape(title)}$", "$options": "i"},
+        "scan_name": {"$regex": f"^{re.escape(scan_name)}$", "$options": "i"},
+        "number": chapter_number 
+    }
+    chapter_doc = chapter_collection.find_one(query)
+    
+    if not chapter_doc:
+        # Si aucune correspondance exacte n'est trouvée, essayer avec des titres normalisés
+        # (remplacer les tirets par des espaces et vice-versa pour le titre du manga)
+        normalized_title_space = title.replace("-", " ")
+        normalized_title_dash = title.replace(" ", "-")
+        
+        or_conditions = []
+        if normalized_title_space != title:
+            or_conditions.append({
+                "manga_title": {"$regex": f"^{re.escape(normalized_title_space)}$", "$options": "i"},
+                "scan_name": {"$regex": f"^{re.escape(scan_name)}$", "$options": "i"},
+                "number": chapter_number
+            })
+        if normalized_title_dash != title:
+            or_conditions.append({
+                "manga_title": {"$regex": f"^{re.escape(normalized_title_dash)}$", "$options": "i"},
+                "scan_name": {"$regex": f"^{re.escape(scan_name)}$", "$options": "i"},
+                "number": chapter_number
+            })
+        
+        if or_conditions:
+            chapter_doc = chapter_collection.find_one({"$or": or_conditions})
+
+    if not chapter_doc:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Chapitre non trouvé: Manga '{title}', Scan '{scan_name}', Chapitre '{chapter_number}'"
+        )
+    
+    # Sérialiser le document pour gérer les ObjectId et autres types non sérialisables
+    serialized_chapter = serialize_doc(chapter_doc)
+
+    # Mettre à jour la popularité du manga en arrière-plan
+    # Assurez-vous que manga_title existe dans le document avant de l'utiliser
+    if "manga_title" in serialized_chapter:
+        await update_manga_popularity(serialized_chapter["manga_title"], background_tasks)
+    
+    return serialized_chapter
+
 
 @router.post("/scans/init-popularity")
 async def init_popularity(force: bool = False) -> Dict[str, Any]:
