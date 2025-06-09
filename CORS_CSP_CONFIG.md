@@ -73,7 +73,7 @@ python run_production.py
 Utilisez l'endpoint `/test-cors` pour vérifier la configuration :
 
 ```bash
-curl -X GET https://api.saumondeluxe.com:63246/test-cors
+curl -X GET https://api.saumondeluxe.com/test-cors
 ```
 
 ## Résolution des problèmes CORS courants
