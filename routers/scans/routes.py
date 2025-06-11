@@ -285,3 +285,76 @@ async def init_popularity(force: bool = False) -> Dict[str, Any]:
         return {"status": "success", "message": "Manga popularity initialized successfully"}
     else:
         return {"status": "skipped", "message": "Manga popularity already initialized. Use force=true to reinitialize."}
+
+
+@router.get("/scans/proxy/image")
+async def proxy_image(url: str, background_tasks: BackgroundTasks):
+    """
+    Proxy pour servir les images avec les bons en-têtes CORS.
+    Résout le problème CORS des images Google Drive et autres services externes.
+    
+    Parameters:
+    - url: L'URL de l'image à proxifier
+    
+    Returns:
+    - L'image avec les en-têtes CORS appropriés
+    """
+    import aiohttp
+    from fastapi.responses import StreamingResponse
+    import io
+    
+    # Vérification de sécurité : s'assurer que l'URL est valide
+    if not url.startswith(('http://', 'https://')):
+        raise HTTPException(status_code=400, detail="URL invalide")
+    
+    # Domaines autorisés pour la sécurité
+    allowed_domains = [
+        'drive.google.com',
+        'googleusercontent.com',
+        'imgur.com',
+        'i.imgur.com',
+        'cdn.jsdelivr.net',
+        'saumondeluxe.com',
+        'api.saumondeluxe.com'
+    ]
+    
+    # Vérifier si le domaine est autorisé
+    from urllib.parse import urlparse
+    parsed_url = urlparse(url)
+    domain = parsed_url.netloc.lower()
+    
+    if not any(allowed_domain in domain for allowed_domain in allowed_domains):
+        raise HTTPException(status_code=403, detail="Domaine non autorisé pour le proxy")
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                if response.status != 200:
+                    raise HTTPException(status_code=response.status, detail="Erreur lors de la récupération de l'image")
+                
+                # Déterminer le type de contenu
+                content_type = response.headers.get('content-type', 'application/octet-stream')
+                
+                # Lire le contenu de l'image
+                content = await response.read()
+                
+                # Créer un stream à partir du contenu
+                def generate():
+                    yield content
+                
+                # Retourner l'image avec les bons en-têtes CORS
+                return StreamingResponse(
+                    io.BytesIO(content),
+                    media_type=content_type,
+                    headers={
+                        "Access-Control-Allow-Origin": "*",
+                        "Access-Control-Allow-Methods": "GET",
+                        "Access-Control-Allow-Headers": "Content-Type",
+                        "Cache-Control": "public, max-age=3600",  # Cache d'1 heure
+                    }
+                )
+                
+    except aiohttp.ClientError as e:
+        raise HTTPException(status_code=500, detail=f"Erreur réseau: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur interne: {str(e)}")

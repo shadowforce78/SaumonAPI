@@ -41,8 +41,15 @@ app.add_middleware(
 async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
     
-    # En-têtes de sécurité
-    response.headers["Content-Security-Policy"] = settings.CSP_POLICY
+    # CSP simplifiée pour la documentation Swagger
+    if request.url.path in ["/docs", "/redoc", "/openapi.json"]:
+        # CSP très permissive pour Swagger UI uniquement
+        response.headers["Content-Security-Policy"] = "default-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net data:; img-src * data:;"
+    else:
+        # CSP normale pour les autres endpoints
+        response.headers["Content-Security-Policy"] = settings.CSP_POLICY
+    
+    # Autres en-têtes de sécurité
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"

@@ -22,14 +22,15 @@ class Settings:
         "https://saumondeluxe.com",
         "https://www.saumondeluxe.com",
         "https://api.saumondeluxe.com",
-    ]
-      # Configuration CSP
+    ]    # Configuration CSP
     CSP_POLICY = (
         "default-src 'self' https://saumondeluxe.com https://api.saumondeluxe.com; "
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://saumondeluxe.com; "
-        "style-src 'self' 'unsafe-inline' https://saumondeluxe.com; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://saumondeluxe.com https://cdn.jsdelivr.net; "
+        "script-src-elem 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+        "style-src 'self' 'unsafe-inline' https://saumondeluxe.com https://cdn.jsdelivr.net; "
+        "style-src-elem 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
         "img-src 'self' data: https: http: https://saumondeluxe.com https://api.saumondeluxe.com; "
-        "font-src 'self' data: https://saumondeluxe.com; "
+        "font-src 'self' data: https://saumondeluxe.com https://cdn.jsdelivr.net; "
         "connect-src 'self' https: http: https://saumondeluxe.com https://api.saumondeluxe.com; "
         "frame-ancestors 'none'; "
         "base-uri 'self'; "
