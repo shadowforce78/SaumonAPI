@@ -88,19 +88,6 @@ def test_cors():
     }
 
 
-@app.options("/{full_path:path}")
-def options_handler(full_path: str):
-    """Gestion explicite des requêtes OPTIONS pour CORS"""
-    return JSONResponse(
-        content={"message": "OK"},
-        headers={
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",
-        }
-    )
-
-
 # Inclusion des routers
 app.include_router(uvsq_edt_router)
 app.include_router(uvsq_bulletin_router)
