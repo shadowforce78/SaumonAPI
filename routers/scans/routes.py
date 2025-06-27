@@ -94,9 +94,6 @@ def get_all_chapter_pages_count(manga_name: str, scans_type: str, chapter: str):
         return {"error": "Chapter not found"}
     return {"page_count": data.get("page_count", 0)}
 
-
-# https://anime-sama.fr/s2/scans/Chainsaw%20Man%20%E2%80%93%20Digital%20Colored%20Comics/1/29.jpg
-# https://anime-sama.fr/s2/scans/Chainsaw%20Man/1/1.jpg
 @router.get("/scans/chapter/pages")
 def get_all_chapter_pages(manga_name: str, scans_type: str, chapter: str):
     """
