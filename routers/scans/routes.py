@@ -14,10 +14,8 @@ router = APIRouter(tags=["Scans"])
 
 
 def untrucate(text: str) -> str:
-    # - => space
-    # _ => '
-    # \/ => #
-    text = text.replace("-", " ").replace("_", "'").replace("#", "\/")
+    text = text.replace("-", " ")
+    text = " ".join(word.capitalize() for word in text.split())
     return text
 
 
