@@ -1,5 +1,5 @@
 from typing import Annotated
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 
 from fastapi import Depends, FastAPI, APIRouter
 from fastapi.security import OAuth2PasswordBearer
@@ -18,7 +18,13 @@ def encode_name(text: str) -> str:
     """
     URL encode the text similar to JavaScript's encodeURIComponent
     """
-    return quote(text, safe='')
+    return quote(text.encode("utf-8"))
+
+def decode_name(text: str) -> str:
+    """
+    URL decode the text similar to JavaScript's decodeURIComponent
+    """
+    return unquote(text)
 
 
 # Define the database
@@ -51,8 +57,8 @@ def get_manga_info(manga_name: str):
     """
     Get detailed information about a specific manga.
     """
-    encoded_name = encode_name(manga_name)
-    manga = manga_collection.find_one({"title": encoded_name}, {"_id": 0})
+    decoded_name = decode_name(manga_name)
+    manga = manga_collection.find_one({"title": decoded_name}, {"_id": 0})
     if not manga:
         return {"error": "Manga not found"}
     return {"manga": manga}
@@ -60,8 +66,8 @@ def get_manga_info(manga_name: str):
 
 @router.get("/scans/manga/chapter/count")
 def get_chapter_count(manga_name: str):
-    encoded_name = encode_name(manga_name)
-    data = manga_collection.find_one({"title": encoded_name}, {"_id": 0})
+    decoded_name = decode_name(manga_name)
+    data = manga_collection.find_one({"title": decoded_name}, {"_id": 0})
     if not data:
         return {"error": "Manga not found"}
     count = []
@@ -86,8 +92,8 @@ def get_all_chapter_pages_count(manga_name: str, scans_type: str, chapter: str):
     """
     data = chapter_collection.find_one(
         {
-            "manga_title": encode_name(manga_name),
-            "scan_name": encode_name(scans_type),
+            "manga_title": decode_name(manga_name),
+            "scan_name": decode_name(scans_type),
             "number": chapter,
         },
         {"_id": 0},
@@ -105,14 +111,14 @@ def get_all_chapter_pages(manga_name: str, scans_type: str, chapter: str):
     if "error" in page_count:
         return page_count
 
-    if encode_name(scans_type) == "Scans":
+    if decode_name(scans_type) == "Scans":
         pages = [
-            f"https://anime-sama.fr/s2/scans/{encode_name(manga_name)}/{chapter}/{i}.jpg"
+            f"https://anime-sama.fr/s2/scans/{decode_name(manga_name)}/{chapter}/{i}.jpg"
             for i in range(1, page_count["page_count"])
         ]
     else:
         pages = [
-            f"https://anime-sama.fr/s2/scans/{encode_name(manga_name)}%20%E2%80%93%20{encode_name(scans_type)}/{chapter}/{i}.jpg"
+            f"https://anime-sama.fr/s2/scans/{decode_name(manga_name)}%20%E2%80%93%20{decode_name(scans_type)}/{chapter}/{i}.jpg"
             for i in range(1, page_count["page_count"])
         ]
     return {"pages": pages}
