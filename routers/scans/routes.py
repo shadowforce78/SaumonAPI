@@ -17,7 +17,7 @@ def untrucate(text: str) -> str:
     # - => space
     # _ => '
     # # => %23
-    text = text.replace("-", " ").replace("_", "'").replace("#", "%23")
+    text = text.replace("-", " ").replace("_", "'")
     return text
 
 
