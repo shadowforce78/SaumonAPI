@@ -20,6 +20,7 @@ def encode_name(text: str) -> str:
     """
     return quote(text.encode("utf-8"))
 
+
 def decode_name(text: str) -> str:
     """
     URL decode the text similar to JavaScript's decodeURIComponent
@@ -41,6 +42,17 @@ def get_scan_count():
     """
     count = manga_collection.count_documents({})
     return {"count": count}
+
+
+@router.get("/scans/manga")
+def search_manga(query: str):
+    """
+    Search for manga by title.
+    """
+    results = list(
+        manga_collection.find({"title": {"$regex": query, "$options": "i"}}, {"_id": 0})
+    )
+    return {"results": results}
 
 
 @router.get("/scans/mangaList")
@@ -101,6 +113,7 @@ def get_all_chapter_pages_count(manga_name: str, scans_type: str, chapter: str):
     if not data:
         return {"error": "Chapter not found"}
     return {"page_count": data.get("page_count", 0)}
+
 
 @router.get("/scans/chapter/pages")
 def get_all_chapter_pages(manga_name: str, scans_type: str, chapter: str):
