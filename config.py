@@ -18,6 +18,7 @@ class Settings:
         "http://127.0.0.1:5173",
         "http://127.0.0.1:8080",
         "http://127.0.0.1:4200",
+        "http://localhost:8081" # Expo React Native
     ]
     # Environnement de production - domaines autorisés
     PRODUCTION_ORIGINS: List[str] = [
