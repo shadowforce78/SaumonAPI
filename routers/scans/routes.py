@@ -143,15 +143,9 @@ def get_scans_planning():
     """
     Get the planning of upcoming scans.
     """
-
-    #   "day": "string" || "Autres",
-    #   "name": "string",
-    #   "url": "string",
-    #   "image": "string",
-    #   "time": "string",
-    #   "status": "string",
-    #   "language": "string"
-    planning = list(planning_collection.find({}, {"_id": 0}).sort("updated_at", pymongo.ASCENDING))
+    planning = list(
+        planning_collection.find({}, {"_id": 0}).sort("updated_at", pymongo.ASCENDING)
+    )
     if not planning:
         return {"error": "No planning found"}
     return {"planning": planning}
