@@ -33,6 +33,7 @@ db = client["SushiScan"]
 # Define collections within the database
 manga_collection = db["mangas"]
 chapter_collection = db["chapters"]
+planning_collection = db["planning"]
 
 
 @router.get("/scans/manga/count")
@@ -135,3 +136,22 @@ def get_all_chapter_pages(manga_name: str, scans_type: str, chapter: str):
             for i in range(1, page_count["page_count"])
         ]
     return {"pages": pages}
+
+
+@router.get("/scans/planning")
+def get_scans_planning():
+    """
+    Get the planning of upcoming scans.
+    """
+
+    #   "day": "string" || "Autres",
+    #   "name": "string",
+    #   "url": "string",
+    #   "image": "string",
+    #   "time": "string",
+    #   "status": "string",
+    #   "language": "string"
+    planning = list(planning_collection.find({}, {"_id": 0}).sort("updated_at", pymongo.ASCENDING))
+    if not planning:
+        return {"error": "No planning found"}
+    return {"planning": planning}
