@@ -132,7 +132,7 @@ def get_all_chapter_pages(manga_name: str, scans_type: str, chapter: str):
         ]
     else:
         pages = [
-            f"https://anime-sama.fr/s2/scans/{decode_name(manga_name)}%20%E2%80%93%20{decode_name(scans_type)}/{chapter}/{i}.jpg"
+            f"https://anime-sama.fr/s2/scans/{decode_name(manga_name)}%20{decode_name(scans_type)}/{chapter}/{i}.jpg"
             for i in range(1, page_count["page_count"])
         ]
     return {"pages": pages}
