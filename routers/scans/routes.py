@@ -34,6 +34,7 @@ db = client["SushiScan"]
 manga_collection = db["mangas"]
 chapter_collection = db["chapters"]
 planning_collection = db["planning"]
+homepage_collection = db["homepage"]
 
 
 @router.get("/scans/manga/count")
@@ -90,6 +91,52 @@ def get_chapter_count(manga_name: str):
             {"name": scan.get("name"), "chapters_count": scan.get("chapters_count", 0)}
         )
     return {"chapters_count": count}
+
+
+@router.get("/scans/manga/classics")
+def get_classic_manga():
+    """
+    Get a list of classic manga from homepage collection.
+    """
+    for homepage in homepage_collection.find(
+        {}, {"_id": 0, "sections.classiques": 1, "statistics.classiques_count": 1}
+    ):
+        if "classiques" in homepage["sections"]:
+            return {
+                "classics": homepage["sections"]["classiques"]["items"],
+                "count": homepage["statistics"]["classiques_count"],
+            }
+
+
+@router.get("/scans/manga/recommended")
+def get_recommended_manga():
+    """
+    Get a list of recommended manga from homepage collection.
+    """
+    for homepage in homepage_collection.find(
+        {}, {"_id": 0, "sections.pepites": 1, "statistics.pepites_count": 1}
+    ):
+        if "pepites" in homepage["sections"]:
+            return {
+                "recommended": homepage["sections"]["pepites"]["items"],
+                "count": homepage["statistics"]["pepites_count"],
+            }
+    return {"error": "No recommended manga found"}
+
+@router.get("/scans/manga/last")
+def get_last_manga():
+    """
+    Get a list of the last manga added to the database.
+    derniers_scans in db
+    """
+    for homepage in homepage_collection.find(
+        {}, {"_id": 0, "sections.derniers_scans": 1, "statistics.derniers_scans_count": 1}
+    ):
+        if "derniers_scans" in homepage["sections"]:
+            return {
+                "last_manga": homepage["sections"]["derniers_scans"]["items"],
+                "count": homepage["statistics"]["derniers_scans_count"],
+            }
 
 
 @router.get("/scans/chapter/count")
