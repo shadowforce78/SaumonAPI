@@ -9,6 +9,7 @@ class Settings:
     CORS_ORIGINS: List[str] = [
         # Environnement de développement
         "https://localhost",  # Capacitor
+        "https://scan.saumondeluxe.com", # Scan
         "http://localhost:3000",  # React
         "http://localhost:5173",  # Vite
         "http://localhost:8080",  # Vue
