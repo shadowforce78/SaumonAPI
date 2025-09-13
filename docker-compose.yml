@@ -11,6 +11,8 @@ services:
       LETSENCRYPT_EMAIL: planque.adam@gmail.com
     networks:
       - proxy-tier
+    env_file:
+        - .env  # Charger les variables d'environnement depuis le fichier .env
 
 networks:
   proxy-tier:
