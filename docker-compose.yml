@@ -1,6 +1,6 @@
 services:
   api:
-    build: ./SaumonAPI  # chemin vers ton projet API
+    build: .  # chemin vers ton projet API
     container_name: api
     restart: unless-stopped
     expose:
