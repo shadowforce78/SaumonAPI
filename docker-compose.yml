@@ -1,0 +1,17 @@
+services:
+  api:
+    build: ./SaumonAPI  # chemin vers ton projet API
+    container_name: api
+    restart: unless-stopped
+    expose:
+      - "8000"
+    environment:
+      VIRTUAL_HOST: api.saumondeluxe.com
+      LETSENCRYPT_HOST: api.saumondeluxe.com
+      LETSENCRYPT_EMAIL: planque.adam@gmail.com
+    networks:
+      - proxy-tier
+
+networks:
+  proxy-tier:
+    external: true
