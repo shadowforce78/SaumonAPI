@@ -13,10 +13,10 @@ class Settings:
         "https://uvsq.saumondeluxe.com", # UVSQ
         "https://api.uvsq.saumondeluxe.com", # UVSQ API
         "http://localhost:3000",  # React
+        "http://localhost:3001",  # Serveur de développement React
         "http://localhost:5173",  # Vite
         "http://localhost:8080",  # Vue
         "http://localhost:4200",  # Angular
-        "http://127.0.0.1:3000",
         "http://127.0.0.1:5500", # Live Server
         "http://127.0.0.1:5173",
         "http://127.0.0.1:8080",
