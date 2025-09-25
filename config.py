@@ -11,6 +11,7 @@ class Settings:
         "https://localhost",  # Capacitor
         "https://scan.saumondeluxe.com", # Scan
         "https://uvsq.saumondeluxe.com", # UVSQ
+        "https://api.uvsq.saumondeluxe.com", # UVSQ API
         "http://localhost:3000",  # React
         "http://localhost:5173",  # Vite
         "http://localhost:8080",  # Vue
