@@ -17,7 +17,7 @@ COPY . .
 COPY .env ./.env
 
 # Exposer le port interne
-EXPOSE 8000
+EXPOSE 63246
 
 # Démarrer via le script Python run_api.py
 CMD ["python", "run_api.py"]
