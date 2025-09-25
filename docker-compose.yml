@@ -4,7 +4,7 @@ services:
     container_name: api
     restart: unless-stopped
     expose:
-      - "8000"
+      - "63246"
     environment:
       VIRTUAL_HOST: api.saumondeluxe.com
       LETSENCRYPT_HOST: api.saumondeluxe.com
