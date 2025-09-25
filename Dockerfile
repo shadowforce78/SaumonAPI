@@ -19,5 +19,5 @@ COPY .env ./.env
 # Exposer le port interne
 EXPOSE 8000
 
-# Lancer Uvicorn (toujours sur 0.0.0.0 pour Docker)
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+# Démarrer via le script Python run_api.py
+CMD ["python", "run_api.py"]
