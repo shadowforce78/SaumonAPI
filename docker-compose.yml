@@ -4,9 +4,10 @@ services:
     container_name: api
     restart: unless-stopped
     expose:
-      - "63246"
+      - "8000"
     environment:
       VIRTUAL_HOST: api.saumondeluxe.com
+      VIRTUAL_PORT: 8000
       LETSENCRYPT_HOST: api.saumondeluxe.com
       LETSENCRYPT_EMAIL: planque.adam@gmail.com
     networks:
