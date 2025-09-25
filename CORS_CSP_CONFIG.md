@@ -52,7 +52,7 @@ ENVIRONMENT=production  # ou "development"
 CORS_ORIGINS=https://saumondeluxe.com,https://www.saumondeluxe.com
 
 # Configuration serveur (production)
-PORT=8000
+PORT=63246
 WORKERS=4
 ```
 

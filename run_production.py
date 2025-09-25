@@ -9,7 +9,7 @@ if __name__ == "__main__":
         uvicorn.run(
             "app:app",
             host="0.0.0.0",  # Écoute sur toutes les interfaces
-            port=int(os.getenv("PORT", 8000)),  # Port par défaut 8000 pour la production
+            port=int(os.getenv("PORT", 63246)),  # Port par défaut 63246 pour la production
             workers=int(os.getenv("WORKERS", 4)),  # Plusieurs workers pour la production
             access_log=True,
             log_level="info",
@@ -19,7 +19,7 @@ if __name__ == "__main__":
         uvicorn.run(
             "app:app",
             host="127.0.0.1",
-            port=8000,
+            port=63246,
             reload=True,
             reload_excludes=["__pycache__"],
             log_level="debug",
