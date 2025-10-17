@@ -38,8 +38,14 @@ def serialize_doc(doc):
     if isinstance(doc, list):
         return [serialize_doc(item) for item in doc]
     if isinstance(doc, dict):
-        return {key: str(value) if key == "_id" else serialize_doc(value) if isinstance(value, (dict, list)) else value 
-                for key, value in doc.items()}
+        return {
+            key: (
+                str(value)
+                if key == "_id"
+                else serialize_doc(value) if isinstance(value, (dict, list)) else value
+            )
+            for key, value in doc.items()
+        }
     return doc
 
 
@@ -56,22 +62,30 @@ def count_oeuvres():
     count = oeuvres_collection.count_documents({})
     return {"count": count}
 
+
 @router.get("/oeuvres")
 def list_oeuvres():
     oeuvres = oeuvres_collection.find().sort("title", pymongo.ASCENDING)
     return [serialize_doc(oeuvre) for oeuvre in oeuvres]
 
+
 @router.get("/oeuvres/{name}")
 def get_oeuvre(name: str):
-    oeuvre = oeuvres_collection.find_one({"title": {"$regex": f"^{re.escape(name)}$", "$options": "i"}})
+    oeuvre = oeuvres_collection.find_one(
+        {"title": {"$regex": f"^{re.escape(name)}$", "$options": "i"}}
+    )
     if oeuvre:
         return serialize_doc(oeuvre)
     return {"error": "Oeuvre not found"}
 
 
-@router.get("/scans/{name}/{}")
+@router.get("/scans/{name}")
 def get_scan(name: str):
-    scan = scans_collection.find_one({"title": {"$regex": f"^{re.escape(name)}$", "$options": "i"}})
+    scan = scans_collection.find_one(
+        {
+            "title": {"$regex": f"^{re.escape(name)}$", "$options": "i"},
+        }
+    )
     if scan:
         return serialize_doc(scan)
     return {"error": "Scan not found"}
