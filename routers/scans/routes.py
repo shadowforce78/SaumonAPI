@@ -2,6 +2,7 @@ from typing import Annotated
 from urllib.parse import quote, unquote
 import re
 
+from bson import ObjectId
 from fastapi import Depends, FastAPI, APIRouter
 from fastapi.security import OAuth2PasswordBearer
 import pymongo
@@ -74,15 +75,24 @@ def list_oeuvres(limit: int = 100, offset: int = 0):
     return [serialize_doc(oeuvre) for oeuvre in oeuvres]
 
 
-@router.get("/oeuvres")
-def get_oeuvre(name: str, id: str):
-    if name:
-        oeuvre = oeuvres_collection.find_one(
-            {"title": {"$regex": f"^{re.escape(name)}$", "$options": "i"}}
-        )
-    elif id:
-        from bson import ObjectId
-        oeuvre = oeuvres_collection.find_one({"_id": ObjectId(id)})
+@router.get("/oeuvres/{name}")
+def get_oeuvre_by_name(name: str):
+
+    oeuvre = oeuvres_collection.find_one(
+        {"title": {"$regex": f"^{re.escape(name)}$", "$options": "i"}}
+    )
+
+    if oeuvre:
+        return serialize_doc(oeuvre)
+    return {"error": "Oeuvre not found"}
+
+
+@router.get("/oeuvres/{id}")
+def get_oeuvre_by_id(id: str):
+    #     from bson.objectid import ObjectId
+    # [i for i in dbm.neo_nodes.find({"_id": ObjectId(obj_id_to_find)})]
+    for oeuvre in oeuvres_collection.find({"_id": ObjectId(id)}):
+        pass
     if oeuvre:
         return serialize_doc(oeuvre)
     return {"error": "Oeuvre not found"}
