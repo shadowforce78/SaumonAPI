@@ -65,15 +65,24 @@ def count_oeuvres():
 
 @router.get("/oeuvres")
 def list_oeuvres(limit: int = 100, offset: int = 0):
-    oeuvres = oeuvres_collection.find().sort("title", pymongo.ASCENDING).skip(offset).limit(limit)
+    oeuvres = (
+        oeuvres_collection.find()
+        .sort("title", pymongo.ASCENDING)
+        .skip(offset)
+        .limit(limit)
+    )
     return [serialize_doc(oeuvre) for oeuvre in oeuvres]
 
 
-@router.get("/oeuvres/{name}")
-def get_oeuvre(name: str):
-    oeuvre = oeuvres_collection.find_one(
-        {"title": {"$regex": f"^{re.escape(name)}$", "$options": "i"}}
-    )
+@router.get("/oeuvres")
+def get_oeuvre(name: str, id: str):
+    if name:
+        oeuvre = oeuvres_collection.find_one(
+            {"title": {"$regex": f"^{re.escape(name)}$", "$options": "i"}}
+        )
+    elif id:
+        from bson import ObjectId
+        oeuvre = oeuvres_collection.find_one({"_id": ObjectId(id)})
     if oeuvre:
         return serialize_doc(oeuvre)
     return {"error": "Oeuvre not found"}
