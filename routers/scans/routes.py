@@ -64,8 +64,8 @@ def count_oeuvres():
 
 
 @router.get("/oeuvres")
-def list_oeuvres():
-    oeuvres = oeuvres_collection.find().sort("title", pymongo.ASCENDING)
+def list_oeuvres(limit: int = 100, offset: int = 0):
+    oeuvres = oeuvres_collection.find().sort("title", pymongo.ASCENDING).skip(offset).limit(limit)
     return [serialize_doc(oeuvre) for oeuvre in oeuvres]
 
 
