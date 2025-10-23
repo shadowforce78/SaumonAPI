@@ -87,3 +87,13 @@ def get_scan(name: str):
     if scan:
         return serialize_doc(scan)
     return {"error": "Scan not found"}
+
+
+@router.get("/episodes/{name}")
+def get_episode(name: str):
+    episode = episodes_collection.find_one(
+        {"title": {"$regex": f"^{re.escape(name)}$", "$options": "i"}}
+    )
+    if episode:
+        return serialize_doc(episode)
+    return {"error": "Episode not found"}
