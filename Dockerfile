@@ -20,4 +20,4 @@ COPY .env ./.env
 EXPOSE 8000
 
 # Lancer Uvicorn (toujours sur 0.0.0.0 pour Docker)
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
