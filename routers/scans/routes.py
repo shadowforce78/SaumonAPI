@@ -82,9 +82,7 @@ def get_oeuvre(name: str):
 @router.get("/scans/{name}")
 def get_scan(name: str):
     scan = scans_collection.find_one(
-        {
-            "title": {"$regex": f"^{re.escape(name)}$", "$options": "i"},
-        }
+        {"title": {"$regex": f"^{re.escape(name)}$", "$options": "i"}}
     )
     if scan:
         return serialize_doc(scan)
