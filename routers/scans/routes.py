@@ -85,25 +85,25 @@ def get_oeuvre(identifier: str):
                 return serialize_doc(oeuvre)
         except:
             pass  # Not a valid ObjectId, continue to search by name
-    
+
     # Search by exact title match (case-insensitive)
     exact_match = oeuvres_collection.find_one(
         {"title": {"$regex": f"^{re.escape(identifier)}$", "$options": "i"}}
     )
-    
+
     if exact_match:
         return serialize_doc(exact_match)
-    
+
     # Search by partial title match (case-insensitive) - return up to 5 results
     partial_matches = list(
         oeuvres_collection.find(
             {"title": {"$regex": f"^{re.escape(identifier)}", "$options": "i"}}
         ).limit(5)
     )
-    
+
     if partial_matches:
         return [serialize_doc(oeuvre) for oeuvre in partial_matches]
-    
+
     return {"error": "Oeuvre not found"}
 
 
@@ -130,23 +130,23 @@ def get_episode(name: str):
 
 @router.get("/utils/genres")
 def get_genres():
-    genres = utils_collection.find_one({"genres": {"$exists": True}})
-    if genres:
-        return serialize_doc(genres)
-    return {"error": "Genres not found"}
+    utils = utils_collection.find_one()
+    if utils:
+        return utils.get("genres", [])
+    return []
 
 
 @router.get("/utils/languages")
 def get_languages():
-    languages = utils_collection.find_one({"languages": {"$exists": True}})
-    if languages:
-        return serialize_doc(languages)
-    return {"error": "Languages not found"}
+    utils = utils_collection.find_one()
+    if utils:
+        return utils.get("languages", [])
+    return []
 
 
 @router.get("/utils/types")
 def get_types():
-    types = utils_collection.find_one({"types": {"$exists": True}})
-    if types:
-        return serialize_doc(types)
-    return {"error": "Types not found"}
+    utils = utils_collection.find_one()
+    if utils:
+        return utils.get("types", [])
+    return []
