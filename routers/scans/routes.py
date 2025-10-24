@@ -125,3 +125,28 @@ def get_episode(name: str):
     if episode:
         return serialize_doc(episode)
     return {"error": "Episode not found"}
+
+
+
+@router.get("/utils/genres")
+def get_genres():
+    genres = utils_collection.find_one({"genres": {"$exists": True}})
+    if genres:
+        return serialize_doc(genres)
+    return {"error": "Genres not found"}
+
+
+@router.get("/utils/languages")
+def get_languages():
+    languages = utils_collection.find_one({"languages": {"$exists": True}})
+    if languages:
+        return serialize_doc(languages)
+    return {"error": "Languages not found"}
+
+
+@router.get("/utils/types")
+def get_types():
+    types = utils_collection.find_one({"types": {"$exists": True}})
+    if types:
+        return serialize_doc(types)
+    return {"error": "Types not found"}
