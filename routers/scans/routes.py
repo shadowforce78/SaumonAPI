@@ -75,26 +75,35 @@ def list_oeuvres(limit: int = 100, offset: int = 0):
     return [serialize_doc(oeuvre) for oeuvre in oeuvres]
 
 
-@router.get("/oeuvres/{name}")
-def get_oeuvre_by_name(name: str):
-
-    oeuvre = oeuvres_collection.find_one(
-        {"title": {"$regex": f"^{re.escape(name)}$", "$options": "i"}}
+@router.get("/oeuvres/{identifier}")
+def get_oeuvre(identifier: str):
+    # Try to find by ObjectId first
+    if len(identifier) == 24:  # ObjectId length
+        try:
+            oeuvre = oeuvres_collection.find_one({"_id": ObjectId(identifier)})
+            if oeuvre:
+                return serialize_doc(oeuvre)
+        except:
+            pass  # Not a valid ObjectId, continue to search by name
+    
+    # Search by exact title match (case-insensitive)
+    exact_match = oeuvres_collection.find_one(
+        {"title": {"$regex": f"^{re.escape(identifier)}$", "$options": "i"}}
     )
-
-    if oeuvre:
-        return serialize_doc(oeuvre)
-    return {"error": "Oeuvre not found"}
-
-
-@router.get("/oeuvres/{id}")
-def get_oeuvre_by_id(id: str):
-    #     from bson.objectid import ObjectId
-    # [i for i in dbm.neo_nodes.find({"_id": ObjectId(obj_id_to_find)})]
-    for oeuvre in oeuvres_collection.find({"_id": ObjectId(id)}):
-        pass
-    if oeuvre:
-        return serialize_doc(oeuvre)
+    
+    if exact_match:
+        return serialize_doc(exact_match)
+    
+    # Search by partial title match (case-insensitive) - return up to 5 results
+    partial_matches = list(
+        oeuvres_collection.find(
+            {"title": {"$regex": f"^{re.escape(identifier)}", "$options": "i"}}
+        ).limit(5)
+    )
+    
+    if partial_matches:
+        return [serialize_doc(oeuvre) for oeuvre in partial_matches]
+    
     return {"error": "Oeuvre not found"}
 
 
